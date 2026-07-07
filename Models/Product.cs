@@ -9,7 +9,7 @@
         public decimal UnitPrice { get; set; }
         public int ReorderLevel { get; set; }
         public int CategoryId { get; set; }
-        public Category Category { get; set; }
+        public Category Category { get; set; } //navigation properties
         public int SupplierId { get; set; }
         public Supplier Supplier { get; set; }
         public ICollection<POLineItem> LineItems { get; set; }

@@ -1,13 +1,14 @@
 ﻿using IMS.Models.DTOs;
 using IMS.Models.DTOs.Request;
+using IMS.Models.DTOs.Response;
 namespace IMS.Services.Interfaces
 {
     public interface IProductService
     {
-        Task<IEnumerable<ProductDTO>> GetAll();
-        Task<ProductDTO> GetById(int id);
-        Task<ProductDTO> CreateAsync(CreateProductDTO productDTO);
-        void UpdateAsync(ProductDTO productDTO);
-        void Delete(int id);
+        Task<IEnumerable<ProductResponseDto>> GetAllAsync();
+        Task<ProductResponseDto> GetByIdAsync(int id);
+        Task<ProductResponseDto> CreateAsync(CreateProductDto productDTO);
+        Task UpdateAsync(int id, CreateProductDto dto);
+        void DeleteAsync(int id);
     }
 }
