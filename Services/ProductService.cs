@@ -35,7 +35,7 @@ namespace IMS.Services
         public async Task<ProductResponseDto> GetByIdAsync(int id)
         {
             var product = await _productRepo.GetByIdAsync(id);
-            if(product == null)
+            if (product == null)
             {
                 throw new KeyNotFoundException("ProductNotFound");
                
