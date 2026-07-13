@@ -93,7 +93,7 @@ namespace IMS.Services
             await _productRepo.SaveChangesAsync();
         }
 
-        public async void DeleteAsync(int id)
+        public async Task DeleteAsync(int id)
         {
             var product = await _productRepo.GetByIdAsync(id);
             if (product == null)

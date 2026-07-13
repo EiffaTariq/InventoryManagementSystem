@@ -72,7 +72,7 @@ namespace IMS.Services
             {
                 throw new KeyNotFoundException("Category does not exist");
             }
-            if (!category.Products.Any())
+            if (category.Products.Any())
             {
                 throw new Exception("Cannot delete this Category");
             }

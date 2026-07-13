@@ -9,6 +9,6 @@ namespace IMS.Services.Interfaces
         Task<ProductResponseDto> GetByIdAsync(int id);
         Task<ProductResponseDto> CreateAsync(CreateProductDto productDTO);
         Task UpdateAsync(int id, CreateProductDto dto);
-        void DeleteAsync(int id);
+        Task DeleteAsync(int id);
     }
 }

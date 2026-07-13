@@ -77,7 +77,7 @@ namespace IMS.Services
             {
                 throw new KeyNotFoundException("Supplier does not exist");
             }
-            if (!supp.PurchaseOrders.Any())
+            if (supp.PurchaseOrders.Any())
             {
                 throw new Exception("Cannot delete this Supplier");
             }
