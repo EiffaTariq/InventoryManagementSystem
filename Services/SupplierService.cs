@@ -44,7 +44,14 @@ namespace IMS.Services
 
         public async Task<SupplierResponseDto> CreateAsync(CreateSupplierDto dto)
         {
-
+            if(dto.PhoneNumber.Length > 11)
+            {
+                throw new ArgumentOutOfRangeException("Phone number too long");
+            }
+            if (dto.PhoneNumber.Length < 11)
+            {
+                throw new ArgumentOutOfRangeException("Phone number is less than range");
+            }
             var supplier = new Supplier
             {
                 Name = dto.Name,
@@ -62,7 +69,14 @@ namespace IMS.Services
             {
                 throw new KeyNotFoundException("Supplier not found");
             }
-
+            if (dto.PhoneNumber.Length > 11)
+            {
+                throw new ArgumentOutOfRangeException("Phone number too long");
+            }
+            if (dto.PhoneNumber.Length < 11)
+            {
+                throw new ArgumentOutOfRangeException("Phone number is less than range");
+            }
             supp.Name = dto.Name;
             supp.Email = dto.Email;
             supp.PhoneNumber = dto.PhoneNumber;

@@ -4,6 +4,7 @@ using IMS.Repositories.Interfaces;
 using IMS.Services.Interfaces;
 using IMS.Services;
 using Microsoft.EntityFrameworkCore;
+using IMS.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +22,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
+app.UseMiddleware<GlobalExceptionMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
