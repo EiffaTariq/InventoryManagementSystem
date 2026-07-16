@@ -1,6 +1,7 @@
 ﻿using IMS.Data;
 using IMS.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace IMS.Repositories.Implementations
 {
@@ -37,6 +38,10 @@ namespace IMS.Repositories.Implementations
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
+        }
+        public async Task<T> FindAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.FirstOrDefaultAsync(predicate);
         }
     }
 }

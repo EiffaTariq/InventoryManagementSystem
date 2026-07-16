@@ -1,6 +1,7 @@
 ﻿using IMS.Models.DTOs.Request;
 using IMS.Models.DTOs.Response;
 using IMS.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IMS.Controllers
@@ -16,6 +17,8 @@ namespace IMS.Controllers
             _productService = productService;
         }
 
+
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetAll()
         {
