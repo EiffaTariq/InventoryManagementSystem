@@ -3,7 +3,10 @@ using IMS.Models;
 using IMS.Repositories.Interfaces;
 using IMS.Services.Interfaces;
 using IMS.Services;
+using IMS.Enums;
 using Microsoft.AspNetCore.Mvc;
+
+
 
 namespace IMS.Controllers
 {
@@ -32,7 +35,7 @@ namespace IMS.Controllers
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PasswordHash = PasswordHasher.Hash(dto.Password),
-                Role = dto.Role
+                Role = UserRole.Viewer
             };
 
             await _userRepository.AddAsync(user);
@@ -44,7 +47,7 @@ namespace IMS.Controllers
             {
                 Token = token,
                 Email = user.Email,
-                Role = user.Role
+                Role = UserRole.Viewer
             });
         }
 

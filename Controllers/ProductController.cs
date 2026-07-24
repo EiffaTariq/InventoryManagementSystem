@@ -8,6 +8,7 @@ namespace IMS.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -18,7 +19,6 @@ namespace IMS.Controllers
         }
 
 
-        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetAll()
         {
@@ -41,6 +41,7 @@ namespace IMS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<ActionResult<ProductResponseDto>> Create(CreateProductDto dto)
         {
             var product = await _productService.CreateAsync(dto);
@@ -62,6 +63,7 @@ namespace IMS.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             try
