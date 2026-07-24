@@ -5,6 +5,7 @@ namespace IMS.Models
     public class PurchaseOrder
     {
         public int Id { get; set; }
+        public decimal TotalAmount { get; set; }
         public DateTime CreatedDate { get; set; }
         public POStatus Status { get; set; }
         public int CreatedByUserId { get; set; } // FK
