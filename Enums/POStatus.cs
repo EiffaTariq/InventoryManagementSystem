@@ -3,11 +3,11 @@
     public enum POStatus
     {
         Draft = 0,
-        Pending = 4,
         Submitted = 1,
         Approved = 2,
         PartiallyReceived = 3,
         FullyReceived = 4,
-        Closed = 5
+        Closed = 5,
+        Pending = 6
     }
 }

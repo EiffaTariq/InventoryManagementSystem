@@ -71,6 +71,9 @@ namespace IMS.Data
             });
             modelBuilder.Entity<PurchaseOrder>(entity =>
             {
+                entity.Property(po => po.Status)
+                .HasConversion<int>();     // explicit: enum stored as int
+
                 entity.HasKey(po => po.Id);
 
                 entity.HasOne(po => po.Supplier)
@@ -82,6 +85,11 @@ namespace IMS.Data
                 .WithMany()
                 .HasForeignKey(po => po.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<POLineItem>(entity =>
+            {
+                entity.Property(li => li.UnitPrice)
+                      .HasColumnType("decimal(18,2)");     // avoid EF Core decimal truncation warning
             });
         }
     }
