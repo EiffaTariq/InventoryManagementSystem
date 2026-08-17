@@ -1,4 +1,5 @@
-﻿using IMS.Models.DTOs.Request;
+﻿using IMS.Exceptions;
+using IMS.Models.DTOs.Request;
 using IMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,25 @@ namespace IMS.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);
+            }
+        }
+
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> TransitionStatus(int id, [FromBody] UpdateStatusDto dto)
+        {
+            try
+            {
+                var order = await _poService.TransitionStatusAsync(id, dto.NewStatus);
+                return Ok(order);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidStatusTransitionException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
     }

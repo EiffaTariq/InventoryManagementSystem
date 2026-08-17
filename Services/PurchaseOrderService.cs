@@ -5,10 +5,10 @@ using IMS.Models.DTOs.Response;
 using IMS.Models;
 using IMS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using IMS.Exceptions;
 
 namespace IMS.Services
 {
-    // Services/PurchaseOrderService.cs
     public class PurchaseOrderService : IPurchaseOrderService
     {
         private readonly AppDbContext _context; // direct DbContext here, since we need Include()
@@ -52,7 +52,7 @@ namespace IMS.Services
             var purchaseOrder = new PurchaseOrder
             {
                 SupplierId = dto.SupplierId,
-                Status = POStatus.Pending,
+                Status = POStatus.Draft,
                 CreatedDate = DateTime.UtcNow,
                 LineItems = new List<POLineItem>()
             };
@@ -73,7 +73,7 @@ namespace IMS.Services
                     ProductId = itemDto.ProductId,
                     Quantity = itemDto.Quantity,
                     UnitPrice = itemDto.UnitPrice,
-                    LineTotal = lineTotal
+                    //LineTotal = lineTotal
                 });
             }
 
@@ -84,6 +84,48 @@ namespace IMS.Services
 
             // reload with related data for the response
             return await GetByIdAsync(purchaseOrder.Id);
+        }
+
+        private async Task CreateStockMovementsForReceivedOrderAsync(PurchaseOrder order)
+        {
+            foreach (var lineItem in order.LineItems)
+            {
+                _context.StockMovements.Add(new StockMovement
+                {
+                    ProductId = lineItem.ProductId,
+                    Type = MovementType.In,
+                    Quantity = lineItem.Quantity,
+                    PurchaseOrderId = order.Id
+                });
+            }
+            // no SaveChangesAsync here — TransitionStatusAsync saves everything together
+        }
+        public async Task<PurchaseOrderResponseDto> TransitionStatusAsync(int orderId, POStatus newStatus)
+        {
+            var order = await _context.PurchaseOrders
+                .Include(po => po.LineItems)
+                .FirstOrDefaultAsync(po => po.Id == orderId);
+
+            if (order == null)
+                throw new KeyNotFoundException($"Purchase Order {orderId} not found.");
+
+            bool isAllowed = AllowedTransitions.TryGetValue(order.Status, out var validNextStates)
+                              && validNextStates.Contains(newStatus);
+
+            if (!isAllowed)
+                throw new InvalidStatusTransitionException(order.Status.ToString(), newStatus.ToString());
+
+            order.Status = newStatus;
+
+            // Day 5 hook goes here — see Part 3
+            if (newStatus == POStatus.FullyReceived)
+            {
+                await CreateStockMovementsForReceivedOrderAsync(order);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return MapToResponseDto(order);
         }
 
         private PurchaseOrderResponseDto MapToResponseDto(PurchaseOrder po)
@@ -106,5 +148,16 @@ namespace IMS.Services
                 }).ToList()
             };
         }
+        private static readonly Dictionary<POStatus, POStatus[]> AllowedTransitions = new()
+        {
+            { POStatus.Draft,             new[] { POStatus.Submitted, POStatus.Cancelled } },
+            { POStatus.Submitted,         new[] { POStatus.Approved, POStatus.Cancelled } },
+            { POStatus.Approved,          new[] { POStatus.PartiallyReceived, POStatus.FullyReceived, POStatus.Cancelled } 
+            },
+            { POStatus.PartiallyReceived, new[] { POStatus.FullyReceived, POStatus.Cancelled } },
+            { POStatus.FullyReceived,     new[] { POStatus.Closed } },
+            { POStatus.Closed,            Array.Empty<POStatus>() }, // terminal
+            { POStatus.Cancelled,         Array.Empty<POStatus>() }  // terminal
+        };
     }
 }

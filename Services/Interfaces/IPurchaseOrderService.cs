@@ -3,7 +3,6 @@ using IMS.Models.DTOs.Response;
 
 namespace IMS.Services.Interfaces
 {
-    // Services/Interfaces/IPurchaseOrderService.cs
     public interface IPurchaseOrderService
     {
         Task<List<PurchaseOrderResponseDto>> GetAllAsync();
