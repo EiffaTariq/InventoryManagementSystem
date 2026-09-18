@@ -7,6 +7,7 @@ namespace IMS.Services.Interfaces
     {
         Task<List<PurchaseOrderResponseDto>> GetAllAsync();
         Task<PurchaseOrderResponseDto> GetByIdAsync(int id);
-        Task<PurchaseOrderResponseDto> CreateAsync(CreatePurchaseOrderDto dto);
+        Task<PurchaseOrderResponseDto> CreateAsync(CreatePurchaseOrderDto dto, int createdByUserId);
+        Task DeleteAsync(int id);
     }
 }

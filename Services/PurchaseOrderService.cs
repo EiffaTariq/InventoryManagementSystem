@@ -4,38 +4,34 @@ using IMS.Models.DTOs.Request;
 using IMS.Models.DTOs.Response;
 using IMS.Models;
 using IMS.Services.Interfaces;
+using IMS.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+
 using IMS.Exceptions;
 
 namespace IMS.Services
 {
     public class PurchaseOrderService : IPurchaseOrderService
     {
-        private readonly AppDbContext _context; // direct DbContext here, since we need Include()
+        private readonly IPurchaseOrderRepository _poRepo;
+        private readonly IRepository<Product> _repo;
 
-        public PurchaseOrderService(AppDbContext context)
+        public PurchaseOrderService(IPurchaseOrderRepository poRepo, IRepository<Product> repo)
         {
-            _context = context;
+            _poRepo = poRepo;
+            _repo = repo;
         }
 
         public async Task<List<PurchaseOrderResponseDto>> GetAllAsync()
         {
-            var orders = await _context.PurchaseOrders
-                .Include(po => po.Supplier)
-                .Include(po => po.LineItems)
-                    .ThenInclude(li => li.Product)
-                .ToListAsync();
+            var orders = await _poRepo.GetAllAsync();
 
             return orders.Select(MapToResponseDto).ToList();
         }
 
         public async Task<PurchaseOrderResponseDto> GetByIdAsync(int id)
         {
-            var order = await _context.PurchaseOrders
-                .Include(po => po.Supplier)
-                .Include(po => po.LineItems)
-                    .ThenInclude(li => li.Product)
-                .FirstOrDefaultAsync(po => po.Id == id);
+            var order = await _poRepo.GetWithLineItemsAsync(id);
 
             if (order == null)
                 throw new KeyNotFoundException("Purchase order not found.");
@@ -43,15 +39,16 @@ namespace IMS.Services
             return MapToResponseDto(order);
         }
 
-        public async Task<PurchaseOrderResponseDto> CreateAsync(CreatePurchaseOrderDto dto)
+        public async Task<PurchaseOrderResponseDto> CreateAsync(CreatePurchaseOrderDto dto, int createdByUserId)
         {
-            var supplier = await _context.Suppliers.FindAsync(dto.SupplierId);
+            var supplier = await _poRepo.GetByIdAsync(dto.SupplierId);
             if (supplier == null)
                 throw new KeyNotFoundException("Supplier not found.");
 
             var purchaseOrder = new PurchaseOrder
             {
                 SupplierId = dto.SupplierId,
+                CreatedByUserId = createdByUserId,
                 Status = POStatus.Draft,
                 CreatedDate = DateTime.UtcNow,
                 LineItems = new List<POLineItem>()
@@ -61,7 +58,7 @@ namespace IMS.Services
 
             foreach (var itemDto in dto.LineItems)
             {
-                var product = await _context.Products.FindAsync(itemDto.ProductId);
+                var product = await _repo.GetByIdAsync(itemDto.ProductId);
                 if (product == null)
                     throw new KeyNotFoundException($"Product with Id {itemDto.ProductId} not found.");
 
@@ -79,54 +76,64 @@ namespace IMS.Services
 
             purchaseOrder.TotalAmount = totalAmount;
 
-            await _context.PurchaseOrders.AddAsync(purchaseOrder);
-            await _context.SaveChangesAsync();
+            await _poRepo.AddAsync(purchaseOrder);
+            await _poRepo.SaveChangesAsync();
 
-            // reload with related data for the response
             return await GetByIdAsync(purchaseOrder.Id);
         }
-
-        private async Task CreateStockMovementsForReceivedOrderAsync(PurchaseOrder order)
+        public async Task DeleteAsync(int id)
         {
-            foreach (var lineItem in order.LineItems)
-            {
-                _context.StockMovements.Add(new StockMovement
-                {
-                    ProductId = lineItem.ProductId,
-                    Type = MovementType.In,
-                    Quantity = lineItem.Quantity,
-                    PurchaseOrderId = order.Id
-                });
-            }
-            // no SaveChangesAsync here — TransitionStatusAsync saves everything together
-        }
-        public async Task<PurchaseOrderResponseDto> TransitionStatusAsync(int orderId, POStatus newStatus)
-        {
-            var order = await _context.PurchaseOrders
-                .Include(po => po.LineItems)
-                .FirstOrDefaultAsync(po => po.Id == orderId);
-
+            var order
+                = await _poRepo.GetWithLineItemsAsync(id);
             if (order == null)
-                throw new KeyNotFoundException($"Purchase Order {orderId} not found.");
+                throw new KeyNotFoundException("Order not found.");
+            if (order.Status != POStatus.Draft)
+                throw new InvalidOperationException("Only draft orders can be deleted.");
 
-            bool isAllowed = AllowedTransitions.TryGetValue(order.Status, out var validNextStates)
-                              && validNextStates.Contains(newStatus);
+            _poRepo.Delete(order); 
+            await _poRepo.SaveChangesAsync();
 
-            if (!isAllowed)
-                throw new InvalidStatusTransitionException(order.Status.ToString(), newStatus.ToString());
-
-            order.Status = newStatus;
-
-            // Day 5 hook goes here — see Part 3
-            if (newStatus == POStatus.FullyReceived)
-            {
-                await CreateStockMovementsForReceivedOrderAsync(order);
-            }
-
-            await _context.SaveChangesAsync();
-
-            return MapToResponseDto(order);
         }
+
+        //private async Task CreateStockMovementsForReceivedOrderAsync(PurchaseOrder order)
+        //{
+        //    foreach (var lineItem in order.LineItems)
+        //    {
+        //        _context.StockMovements.Add(new StockMovement
+        //        {
+        //            ProductId = lineItem.ProductId,
+        //            Type = MovementType.In,
+        //            Quantity = lineItem.Quantity,
+        //            PurchaseOrderId = order.Id
+        //        });
+        //    }
+        //}
+        //public async Task<PurchaseOrderResponseDto> TransitionStatusAsync(int orderId, POStatus newStatus)
+        //{
+        //    var order = await _context.PurchaseOrders
+        //        .Include(po => po.LineItems)
+        //        .FirstOrDefaultAsync(po => po.Id == orderId);
+
+        //    if (order == null)
+        //        throw new KeyNotFoundException($"Purchase Order {orderId} not found.");
+
+        //    bool isAllowed = AllowedTransitions.TryGetValue(order.Status, out var validNextStates)
+        //                      && validNextStates.Contains(newStatus);
+
+        //    if (!isAllowed)
+        //        throw new InvalidStatusTransitionException(order.Status.ToString(), newStatus.ToString());
+
+        //    order.Status = newStatus;
+
+        //    if (newStatus == POStatus.FullyReceived)
+        //    {
+        //        await CreateStockMovementsForReceivedOrderAsync(order);
+        //    }
+
+        //    await _context.SaveChangesAsync();
+
+        //    return MapToResponseDto(order);
+        //}
 
         private PurchaseOrderResponseDto MapToResponseDto(PurchaseOrder po)
         {
@@ -144,7 +151,7 @@ namespace IMS.Services
                     ProductName = li.Product.Name,
                     Quantity = li.Quantity,
                     UnitPrice = li.UnitPrice,
-                    LineTotal = li.LineTotal
+                    LineTotal = li.Quantity * li.UnitPrice
                 }).ToList()
             };
         }

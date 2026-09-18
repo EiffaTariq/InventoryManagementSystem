@@ -20,6 +20,7 @@ namespace IMS.Controllers
 
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetAll()
         {
             var products = await _productService.GetAllAsync();

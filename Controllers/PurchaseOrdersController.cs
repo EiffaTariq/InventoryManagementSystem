@@ -1,12 +1,13 @@
 ﻿using IMS.Exceptions;
 using IMS.Models.DTOs.Request;
+using IMS.Services;
 using IMS.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace IMS.Controllers
 {
-    // Controllers/PurchaseOrdersController.cs
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -46,7 +47,9 @@ namespace IMS.Controllers
         {
             try
             {
-                var order = await _poService.CreateAsync(dto);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var order = await _poService.CreateAsync(dto, userId);
+               
                 return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
             }
             catch (KeyNotFoundException ex)
@@ -55,23 +58,14 @@ namespace IMS.Controllers
             }
         }
 
-        [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> TransitionStatus(int id, [FromBody] UpdateStatusDto dto)
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+
+        async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                var order = await _poService.TransitionStatusAsync(id, dto.NewStatus);
-                return Ok(order);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidStatusTransitionException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var order = await _poService.GetByIdAsync(id);
+            return Ok(order);
         }
+
     }
 }
