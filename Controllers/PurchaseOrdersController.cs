@@ -1,4 +1,5 @@
-﻿using IMS.Exceptions;
+﻿using IMS.Enums;
+using IMS.Exceptions;
 using IMS.Models.DTOs.Request;
 using IMS.Services;
 using IMS.Services.Interfaces;
@@ -67,5 +68,12 @@ namespace IMS.Controllers
             return Ok(order);
         }
 
+        //[HttpPatch("{id}/status")]
+        //[Authorize(Roles = "Admin,Manager")]
+        //public async Task<IActionResult> TransitionStatus(int id, [FromBody] POStatus newStatus)
+        //{
+        //    var po = await _poService.TransitionStatusAsync(id, newStatus);
+        //    return Ok(po);
+        //}
     }
 }

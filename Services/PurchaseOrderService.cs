@@ -8,6 +8,7 @@ using IMS.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 using IMS.Exceptions;
+using System.Data;
 
 namespace IMS.Services
 {
@@ -21,6 +22,17 @@ namespace IMS.Services
             _poRepo = poRepo;
             _repo = repo;
         }
+
+        private static readonly Dictionary<POStatus, List<POStatus>> validTransitions = new()
+        {
+            { POStatus.Draft,             new List<POStatus> { POStatus.Submitted, POStatus.Cancelled } },
+            { POStatus.Submitted,         new List<POStatus> { POStatus.Approved, POStatus.Cancelled } },
+            { POStatus.Approved,          new List<POStatus> { POStatus.PartiallyReceived, POStatus.FullyReceived,  POStatus.Cancelled } },
+            { POStatus.PartiallyReceived, new List<POStatus> { POStatus.FullyReceived, POStatus.Cancelled } },
+            { POStatus.FullyReceived,     new List<POStatus> { POStatus.Closed } },
+            { POStatus.Closed,            new List<POStatus>() },
+            { POStatus.Cancelled,         new List<POStatus>() }
+        };
 
         public async Task<List<PurchaseOrderResponseDto>> GetAllAsync()
         {
@@ -95,45 +107,6 @@ namespace IMS.Services
 
         }
 
-        //private async Task CreateStockMovementsForReceivedOrderAsync(PurchaseOrder order)
-        //{
-        //    foreach (var lineItem in order.LineItems)
-        //    {
-        //        _context.StockMovements.Add(new StockMovement
-        //        {
-        //            ProductId = lineItem.ProductId,
-        //            Type = MovementType.In,
-        //            Quantity = lineItem.Quantity,
-        //            PurchaseOrderId = order.Id
-        //        });
-        //    }
-        //}
-        //public async Task<PurchaseOrderResponseDto> TransitionStatusAsync(int orderId, POStatus newStatus)
-        //{
-        //    var order = await _context.PurchaseOrders
-        //        .Include(po => po.LineItems)
-        //        .FirstOrDefaultAsync(po => po.Id == orderId);
-
-        //    if (order == null)
-        //        throw new KeyNotFoundException($"Purchase Order {orderId} not found.");
-
-        //    bool isAllowed = AllowedTransitions.TryGetValue(order.Status, out var validNextStates)
-        //                      && validNextStates.Contains(newStatus);
-
-        //    if (!isAllowed)
-        //        throw new InvalidStatusTransitionException(order.Status.ToString(), newStatus.ToString());
-
-        //    order.Status = newStatus;
-
-        //    if (newStatus == POStatus.FullyReceived)
-        //    {
-        //        await CreateStockMovementsForReceivedOrderAsync(order);
-        //    }
-
-        //    await _context.SaveChangesAsync();
-
-        //    return MapToResponseDto(order);
-        //}
 
         private PurchaseOrderResponseDto MapToResponseDto(PurchaseOrder po)
         {
@@ -166,5 +139,23 @@ namespace IMS.Services
             { POStatus.Closed,            Array.Empty<POStatus>() }, // terminal
             { POStatus.Cancelled,         Array.Empty<POStatus>() }  // terminal
         };
+
+        public async Task TransitionStatusAsync(int orderId, POStatus newStatus, string userRole)
+        {
+            var order = await _poRepo.GetByIdAsync(orderId);
+            if (order == null)
+                throw new KeyNotFoundException("Order not found");
+            if (!validTransitions.TryGetValue(order.Status, out var allowedNext)
+            || !allowedNext.Contains(newStatus))
+            {
+                throw new InvalidStatusTransitionException(order.Status.ToString(), newStatus.ToString());
+            }
+            if (newStatus == POStatus.Approved && userRole != "Admin")
+                throw new UnauthorizedAccessException("Only Admin can approve a purchase order");
+            order.Status = newStatus;
+            _poRepo.Update(order);
+            await _poRepo.SaveChangesAsync();
+            return MapToResponseDto(order);
+        }
     }
 }
