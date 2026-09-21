@@ -13,5 +13,6 @@
         public int SupplierId { get; set; }
         public Supplier Supplier { get; set; }
         public ICollection<POLineItem> LineItems { get; set; }
+        public ICollection<StockMovement> StockMovements { get; set; }
     }
 }

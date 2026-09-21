@@ -16,11 +16,14 @@ namespace IMS.Services
     {
         private readonly IPurchaseOrderRepository _poRepo;
         private readonly IRepository<Product> _repo;
+        private readonly AppDbContext _context;
 
-        public PurchaseOrderService(IPurchaseOrderRepository poRepo, IRepository<Product> repo)
+        public PurchaseOrderService(IPurchaseOrderRepository poRepo, IRepository<Product> repo,
+            AppDbContext context)
         {
             _poRepo = poRepo;
             _repo = repo;
+            _context = context;
         }
 
         private static readonly Dictionary<POStatus, List<POStatus>> validTransitions = new()
@@ -136,11 +139,11 @@ namespace IMS.Services
             },
             { POStatus.PartiallyReceived, new[] { POStatus.FullyReceived, POStatus.Cancelled } },
             { POStatus.FullyReceived,     new[] { POStatus.Closed } },
-            { POStatus.Closed,            Array.Empty<POStatus>() }, // terminal
-            { POStatus.Cancelled,         Array.Empty<POStatus>() }  // terminal
+            { POStatus.Closed,            Array.Empty<POStatus>() }, 
+            { POStatus.Cancelled,         Array.Empty<POStatus>() }  
         };
 
-        public async Task TransitionStatusAsync(int orderId, POStatus newStatus, string userRole)
+        public async Task<PurchaseOrderResponseDto> TransitionStatusAsync(int orderId, POStatus newStatus, string userRole)
         {
             var order = await _poRepo.GetByIdAsync(orderId);
             if (order == null)
@@ -156,6 +159,24 @@ namespace IMS.Services
             _poRepo.Update(order);
             await _poRepo.SaveChangesAsync();
             return MapToResponseDto(order);
+        }
+
+        private async Task CreateStockMovementsForReceivedOrderAsync(PurchaseOrder order)
+        {
+            foreach (var lineItem in order.LineItems)
+            {
+                var movement = new StockMovement
+                {
+                    ProductId = lineItem.ProductId,
+                    Type = StockMovementType.In,
+                    Quantity = lineItem.Quantity,
+                    PurchaseOrderId = order.Id,
+                    Date = DateTime.UtcNow,
+                    Notes = $"Stock received from PO #{order.Id}"
+                };
+                await _context.StockMovements.AddAsync(movement);
+            }
+            // don't SaveChanges here — TransitionStatusAsync handles it
         }
     }
 }

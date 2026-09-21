@@ -13,6 +13,8 @@ namespace IMS.Data
         public DbSet<User> Users { get; set; }
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<POLineItem> POLineItems { get; set; }
+        public DbSet<StockMovement> StockMovements { get; set; }
+        public DbSet<LowStockAlert> LowStockAlerts { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Product>(entity =>
@@ -90,6 +92,31 @@ namespace IMS.Data
             {
                 entity.Property(li => li.UnitPrice)
                       .HasColumnType("decimal(18,2)");     // avoid EF Core decimal truncation warning
+            });
+            modelBuilder.Entity<StockMovement>(entity =>
+            {
+                entity.HasKey(sm => sm.Id);
+
+                entity.HasOne(sm => sm.Product)
+                      .WithMany(p => p.StockMovements)
+                      .HasForeignKey(sm => sm.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(sm => sm.PurchaseOrder)
+                      .WithMany()
+                      .HasForeignKey(sm => sm.PurchaseOrderId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired(false); // nullable FK
+            });
+
+            modelBuilder.Entity<LowStockAlert>(entity =>
+            {
+                entity.HasKey(la => la.Id);
+
+                entity.HasOne(la => la.Product)
+                      .WithMany()
+                      .HasForeignKey(la => la.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
