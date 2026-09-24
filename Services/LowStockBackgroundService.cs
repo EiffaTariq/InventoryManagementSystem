@@ -38,8 +38,6 @@ namespace IMS.Services
 
             foreach (var product in lowStockProducts)
             {
-                // check if alert already exists for today
-                // avoids duplicate alerts for same product on same day
                 var alreadyAlerted = context.LowStockAlerts.Any(a =>
                     a.ProductId == product.Id &&
                     a.AlertDate.Date == DateTime.UtcNow.Date);

@@ -27,7 +27,7 @@ namespace IMS.Data
                 .HasMaxLength(100);
                 entity.Property(p => p.UnitPrice)
                 .HasColumnType("decimal(18,2)");
-                //Relationships
+                
                 entity.HasOne(p => p.Category)
                 .WithMany(c => c.Products)
                 .HasForeignKey(p => p.CategoryId)
@@ -74,7 +74,7 @@ namespace IMS.Data
             modelBuilder.Entity<PurchaseOrder>(entity =>
             {
                 entity.Property(po => po.Status)
-                .HasConversion<int>();     // explicit: enum stored as int
+                .HasConversion<int>();     
 
                 entity.HasKey(po => po.Id);
 
@@ -106,7 +106,7 @@ namespace IMS.Data
                       .WithMany()
                       .HasForeignKey(sm => sm.PurchaseOrderId)
                       .OnDelete(DeleteBehavior.Restrict)
-                      .IsRequired(false); // nullable FK
+                      .IsRequired(false);
             });
 
             modelBuilder.Entity<LowStockAlert>(entity =>

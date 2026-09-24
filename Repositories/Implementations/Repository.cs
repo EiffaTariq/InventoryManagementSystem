@@ -12,7 +12,7 @@ namespace IMS.Repositories.Implementations
         public Repository(AppDbContext context)
         {
             _context = context;
-            _dbSet = context.Set<T>(); //_context.Table
+            _dbSet = context.Set<T>(); 
         }
         public async Task<IEnumerable<T>> GetAllAsync()
         {
