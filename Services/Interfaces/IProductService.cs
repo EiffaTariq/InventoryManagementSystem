@@ -6,6 +6,8 @@ namespace IMS.Services.Interfaces
     public interface IProductService
     {
         Task<IEnumerable<ProductResponseDto>> GetAllAsync();
+        Task<PagedResponseDto<ProductResponseDto>> GetAllAsync(ProductQueryParams queryParams);
+
         Task<ProductResponseDto> GetByIdAsync(int id);
         Task<ProductResponseDto> CreateAsync(CreateProductDto productDTO);
         Task UpdateAsync(int id, CreateProductDto dto);

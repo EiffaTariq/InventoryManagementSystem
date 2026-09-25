@@ -3,6 +3,7 @@ using IMS.Models.DTOs.Request;
 using IMS.Models.DTOs.Response;
 using IMS.Repositories.Interfaces;
 using IMS.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 namespace IMS.Services
 {
     public class ProductService: IProductService
@@ -103,6 +104,55 @@ namespace IMS.Services
 
             _productRepo.Delete(product);
             await _productRepo.SaveChangesAsync();
+        }
+        public async Task<PagedResponseDto<ProductResponseDto>> GetAllAsync(ProductQueryParams queryParams)
+        {
+            // start with IQueryable — nothing hits DB yet
+            var query = _productRepo.GetQueryable()
+                .Include(p => p.Category)
+                .Include(p => p.Supplier)
+                .AsQueryable();
+
+            // apply filters only if provided
+            if (queryParams.CategoryId.HasValue)
+                query = query.Where(p => p.CategoryId == queryParams.CategoryId);
+
+            if (queryParams.SupplierId.HasValue)
+                query = query.Where(p => p.SupplierId == queryParams.SupplierId);
+
+            if (!string.IsNullOrEmpty(queryParams.SearchTerm))
+                query = query.Where(p => p.Name.Contains(queryParams.SearchTerm));
+
+            // get total count BEFORE pagination
+            var totalCount = await query.CountAsync();
+
+            // apply pagination — Skip and Take
+            var items = await query
+                .OrderBy(p => p.Id)
+                .Skip((queryParams.Page - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
+                .Select(p => new ProductResponseDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    UnitPrice = p.UnitPrice,
+                    Quantity = p.Quantity,
+                    ReorderLevel = p.ReorderLevel,
+                    Description = p.Description,
+                    SupplierName = p.Supplier.Name,
+                    SupplierId = p.SupplierId,
+                    CategoryName = p.Category.Name,
+                    CategoryId = p.CategoryId
+                })
+                .ToListAsync();
+
+            return new PagedResponseDto<ProductResponseDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = queryParams.Page,
+                PageSize = queryParams.PageSize
+            };
         }
     }
 }

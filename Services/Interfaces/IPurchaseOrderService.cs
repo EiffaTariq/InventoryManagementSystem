@@ -6,7 +6,8 @@ namespace IMS.Services.Interfaces
 {
     public interface IPurchaseOrderService
     {
-        Task<List<PurchaseOrderResponseDto>> GetAllAsync();
+        Task<PagedResponseDto<PurchaseOrderResponseDto>> GetAllAsync(PurchaseOrderQueryParams queryParams);
+
         Task<PurchaseOrderResponseDto> GetByIdAsync(int id);
         Task<PurchaseOrderResponseDto> CreateAsync(CreatePurchaseOrderDto dto, int createdByUserId);
         Task DeleteAsync(int id);

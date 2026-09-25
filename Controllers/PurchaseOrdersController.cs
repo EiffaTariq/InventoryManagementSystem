@@ -21,12 +21,6 @@ namespace IMS.Controllers
             _poService = poService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var orders = await _poService.GetAllAsync();
-            return Ok(orders);
-        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
@@ -67,13 +61,36 @@ namespace IMS.Controllers
             var order = await _poService.GetByIdAsync(id);
             return Ok(order);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] PurchaseOrderQueryParams queryParams)
+        {
+            var result = await _poService.GetAllAsync(queryParams);
+            return Ok(result);
+        }
 
-        //[HttpPatch("{id}/status")]
-        //[Authorize(Roles = "Admin,Manager")]
-        //public async Task<IActionResult> TransitionStatus(int id, [FromBody] POStatus newStatus)
-        //{
-        //    var po = await _poService.TransitionStatusAsync(id, newStatus);
-        //    return Ok(po);
-        //}
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> TransitionStatus(int id, [FromBody] POStatus newStatus)
+        {
+            try
+            {
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                var order = await _poService.TransitionStatusAsync(id, newStatus, userRole);
+                return Ok(order);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidStatusTransitionException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, ex.Message);
+            }
+        }
+
     }
 }

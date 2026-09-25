@@ -21,10 +21,11 @@ namespace IMS.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] ProductQueryParams queryParams)
         {
-            var products = await _productService.GetAllAsync();
-            return Ok(products);
+            // [FromQuery] reads params from URL: /api/products?page=1&pageSize=10&categoryId=2
+            var result = await _productService.GetAllAsync(queryParams);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]

@@ -4,6 +4,7 @@ namespace IMS.Repositories.Interfaces
 {
     public interface IRepository<T> where T : class
     {
+        IQueryable<T> GetQueryable();
         Task<IEnumerable<T>> GetAllAsync();
         Task<T> GetByIdAsync(int id);
         Task AddAsync(T entity);

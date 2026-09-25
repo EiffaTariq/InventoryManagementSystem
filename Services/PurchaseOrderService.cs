@@ -178,5 +178,41 @@ namespace IMS.Services
             }
             // don't SaveChanges here — TransitionStatusAsync handles it
         }
+        public async Task<PagedResponseDto<PurchaseOrderResponseDto>> GetAllAsync(PurchaseOrderQueryParams queryParams)
+        {
+            // start with IQueryable — nothing hits DB yet
+            var query = _poRepo.GetQueryable()
+                .Include(po => po.Supplier)
+                .Include(po => po.LineItems)
+                    .ThenInclude(li => li.Product)
+                .AsQueryable();
+
+            // apply filters only if provided
+            if (queryParams.SupplierId.HasValue)
+                query = query.Where(po => po.SupplierId == queryParams.SupplierId);
+
+            if (queryParams.CategoryId.HasValue)
+                query = query.Where(po => po.LineItems.Any(li => li.Product.CategoryId == queryParams.CategoryId));
+
+            // get total count BEFORE pagination
+            var totalCount = await query.CountAsync();
+
+            // apply pagination — Skip and Take
+            var orders = await query
+                .OrderByDescending(po => po.CreatedDate)
+                .Skip((queryParams.Page - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
+                .ToListAsync();
+
+            // map and return PagedResponseDto
+            return new PagedResponseDto<PurchaseOrderResponseDto>
+            {
+                Items = orders.Select(MapToResponseDto).ToList(),
+                TotalCount = totalCount,
+                Page = queryParams.Page,
+                PageSize = queryParams.PageSize
+            };
+        }
     }
+
 }

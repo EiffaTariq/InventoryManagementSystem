@@ -43,5 +43,9 @@ namespace IMS.Repositories.Implementations
         {
             return await _dbSet.FirstOrDefaultAsync(predicate);
         }
+        public IQueryable<T> GetQueryable()
+        {
+            return _dbSet.AsQueryable();
+        }
     }
 }
