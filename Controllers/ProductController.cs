@@ -23,7 +23,6 @@ namespace IMS.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetAll([FromQuery] ProductQueryParams queryParams)
         {
-            // [FromQuery] reads params from URL: /api/products?page=1&pageSize=10&categoryId=2
             var result = await _productService.GetAllAsync(queryParams);
             return Ok(result);
         }

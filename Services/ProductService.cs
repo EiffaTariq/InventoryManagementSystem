@@ -28,9 +28,6 @@ namespace IMS.Services
                 SupplierName = p.Supplier.Name,
                 CategoryName = p.Category.Name
             });
-            // 1. get all products from repo
-            // 2. map each product to ProductResponseDto
-            // 3. return the list
         }
 
         public async Task<ProductResponseDto> GetByIdAsync(int id)
@@ -65,7 +62,7 @@ namespace IMS.Services
                 ReorderLevel = dto.ReorderLevel,
                 SupplierId = dto.SupplierId,
                 CategoryId = dto.CategoryId,
-                Quantity = 0 // business rule: new products start at 0 stock
+                Quantity = 0 
             };
 
             await _productRepo.AddAsync(product);
@@ -107,13 +104,11 @@ namespace IMS.Services
         }
         public async Task<PagedResponseDto<ProductResponseDto>> GetAllAsync(ProductQueryParams queryParams)
         {
-            // start with IQueryable — nothing hits DB yet
             var query = _productRepo.GetQueryable()
                 .Include(p => p.Category)
                 .Include(p => p.Supplier)
                 .AsQueryable();
 
-            // apply filters only if provided
             if (queryParams.CategoryId.HasValue)
                 query = query.Where(p => p.CategoryId == queryParams.CategoryId);
 
@@ -123,10 +118,8 @@ namespace IMS.Services
             if (!string.IsNullOrEmpty(queryParams.SearchTerm))
                 query = query.Where(p => p.Name.Contains(queryParams.SearchTerm));
 
-            // get total count BEFORE pagination
             var totalCount = await query.CountAsync();
 
-            // apply pagination — Skip and Take
             var items = await query
                 .OrderBy(p => p.Id)
                 .Skip((queryParams.Page - 1) * queryParams.PageSize)
